@@ -1,0 +1,135 @@
+# CONFIGURATION
+# -------------
+
+# Enable/disable flags for separators
+local enable_time_separator=false
+local enable_username_separator=false
+local enable_path_separator=true
+local enable_git_separator=true
+local enable_k8s_separator=false
+local enable_prompt_sign=true
+local enable_new_line=true
+local enable_prompt_sign=true
+
+# Prefix and suffix configuration
+local time_prefix="%B" time_suffix="%b "
+local username_prefix="(" username_suffix=") "
+local path_prefix="%B" path_suffix="%b"
+local git_prefix="%Bgit%b: " git_suffix=""
+local k8s_prefix="%Bk8s%b: " k8s_suffix=""
+local prompt_sign="%F{254}$%f "
+
+# Separator
+local separator=" %B⟫%b "
+
+# CONFIGURATION END
+# -------------
+# Enable necessary options
+setopt PROMPT_SP
+setopt prompt_subst
+
+# Load vcs_info for Git information
+autoload -Uz vcs_info
+zstyle ':vcs_info:git*' formats '%F{254}%b%F{245}' # format $vcs_info_msg_0_
+
+# Function to parse git status
+parse_git_status() {
+    # Gather git information
+    local git_status="$(git status --porcelain 2> /dev/null)"
+    local git_branch="$(git rev-parse --abbrev-ref HEAD 2> /dev/null)"
+    local git_upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2> /dev/null)"
+    local git_local="$(git rev-parse @ 2> /dev/null)"
+    local git_remote="$(git rev-parse @{u} 2> /dev/null)"
+    local git_base="$(git merge-base @ @{u} 2> /dev/null)"
+
+    # Determine status and output accordingly
+    local -a status_outputs
+    local status_output=""
+
+    if [[ -n "$git_status" ]]; then
+        status_outputs+=("%F{red}●%f") # Uncommitted changes
+    fi
+
+    if [[ -n "$git_branch" && -n "$git_upstream" ]]; then
+        if [[ "$git_local" != "$git_remote" ]]; then
+            if [[ "$git_local" != "$git_base" && "$git_remote" == "$git_base" ]]; then
+                status_outputs+=("%F{green}↑%f") # Push needed
+            elif [[ "$git_remote" != "$git_base" && "$git_local" == "$git_base" ]]; then
+                status_outputs+=("%F{blue}↓%f") # Pull needed
+            fi
+        fi
+    fi
+
+    # Join the status outputs with spaces
+    status_output=$(IFS=" "; echo "${status_outputs[*]}")
+
+    echo -n "$status_output"
+
+}
+
+# Function to format the git prompt
+git_prompt() {
+    vcs_info
+    local git_status_output="$(parse_git_status)"
+    local vcs_info_output="${vcs_info_msg_0_}"
+
+    if [[ -n "$vcs_info_output" ]]; then
+        echo -n "%F{245}${vcs_info_output} ${git_status_output}%f"
+    fi
+}
+
+prompt_shorten_path() {
+    local path="${PWD/#$HOME/~}"  # Replace home directory with '~'
+    
+    if [[ $path == "~" ]]; then
+        # If in the home directory, just show '~'
+        echo $path
+    else
+        # Split the path into an array using zsh parameter expansion
+        local path_array=("${(@s:/:)path}")
+        
+        # Number of elements in the path
+        local num_elements=${#path_array[@]}
+
+        if (( num_elements <= 4 )); then
+            echo "${path_array[1]:+${path_array[1]}}${path_array[2]:+/${path_array[2]}}${path_array[3]:+/${path_array[3]}}${path_array[4]:+/${path_array[4]}}"
+        else
+            # Third level of depth and deeper
+            local last_part="${path_array[-1]}"
+            local first_part="${path_array[1]}"
+            echo "${path_array[1]:+${path_array[1]}}${path_array[2]:+/${path_array[2]}}${path_array[3]:+/${path_array[3]}}/.../${last_part}"
+        fi
+    fi
+}
+
+k8s_context() {
+    local ctx=$(kubectl config current-context 2>/dev/null)
+    if [[ -n "$ctx" ]]; then
+        echo "${ctx}/$(kubectl config view --minify --output 'jsonpath={..namespace}')"
+    fi
+}
+
+# Prompt components
+local prompt_time='%F{245}%*%f'
+local prompt_username='%F{254}%n%f'
+local prompt_path='%F{153}$(prompt_shorten_path)%f'
+local prompt_k8s='$(k8s_context)'
+local prompt_new_line=''
+
+# Enable/disable logic for separators
+[[ $enable_time_separator == true ]] && time_suffix="${time_suffix}${separator}"
+[[ $enable_username_separator == true ]] && username_suffix="${username_suffix}${separator}"
+[[ $enable_path_separator == true ]] && path_suffix="${path_suffix}${separator}"
+[[ $enable_git_separator == true ]] && git_suffix="${git_suffix}${separator}"
+[[ $enable_k8s_separator == true ]] && k8s_suffix="${k8s_suffix}${separator}"
+[[ $enable_new_line == true ]] && prompt_new_line=$'\n'
+[[ $enable_prompt_sign == false ]] && prompt_sign=""
+
+# precmd function to update the prompt
+precmd() { 
+    prompt_git="$(git_prompt)"
+    if [[ -n "$prompt_git" ]]; then
+        prompt_git="${git_prefix}${prompt_git}${git_suffix}"
+    fi
+    PS1="${time_prefix}${prompt_time}${time_suffix}${username_prefix}${prompt_username}${username_suffix}${path_prefix}${prompt_path}${path_suffix}${prompt_git}${k8s_prefix}${prompt_k8s}${k8s_suffix}${prompt_new_line}${prompt_sign}"
+}
