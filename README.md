@@ -1,6 +1,9 @@
 # zsh-utils
 Repository to store my ZSH configs
 
+## Installation
+All files goes in your home folder. Make sure to not overwrite the `.zshrc` if you have customisation in yours. Just add what's relevant to your setup.
+
 ## ZSH Prompt
 1. Home folder
 ![Home](/screenshots/home%20directory.png)
