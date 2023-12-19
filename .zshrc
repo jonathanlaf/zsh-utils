@@ -1,10 +1,12 @@
+# Ignore duplicate entries in history
 setopt HIST_IGNORE_DUPS
+
+# Load autocomplete in zsh
 autoload bashcompinit
 bashcompinit
 
-# ls
+# Alias with EXA (brew install exa) 
 TREE_IGNORE="cache|log|logs|node_modules|vendor"
-
 alias ls='exa --group-directories-first --header --group --long --git --icons'
 alias la='ls -a'
 alias ll='ls --git -l'
@@ -13,7 +15,8 @@ alias ltt='ls --tree -D -L 3 -I ${TREE_IGNORE}'
 alias lttt='ls --tree -D -L 4 -I ${TREE_IGNORE}'
 alias ltttt='ls --tree -D -L 5 -I ${TREE_IGNORE}'
 
-source ~/.zsh_prompt
+# Load the custom prompt.
+source ~/.zsh_prompt 
 
 # MUST BE LAST.
 export NVM_DIR="$HOME/.nvm"
