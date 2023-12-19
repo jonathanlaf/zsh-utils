@@ -15,3 +15,6 @@ All files goes in your home folder. Make sure to not overwrite the `.zshrc` if y
 ![Git Dirty](/screenshots/inside%20a%20git%20repo%20dirty.png)
 5. Shorten path when too far inside the structure (4 folder deep)
 ![Shorten path](/screenshots/shorten%20path.png)
+
+## EXA List
+![EXA List 2 folders deep tree](/screenshots/EXA%20listing%202%20folders%20deep.png)
